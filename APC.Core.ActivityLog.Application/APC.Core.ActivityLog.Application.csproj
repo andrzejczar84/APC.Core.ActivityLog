@@ -6,4 +6,9 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\APC.Core.ActivityLog.Core\APC.Core.ActivityLog.Core.csproj" />
+    <ProjectReference Include="..\APC.Core.ActivityLog.Infrastructure\APC.Core.ActivityLog.Infrastructure.csproj" />
+  </ItemGroup>
+
 </Project> 

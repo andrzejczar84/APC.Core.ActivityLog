@@ -1,0 +1,101 @@
+@using APC.Core.ActivityLog.Core.Entities
+@using APC.Core.ActivityLog.Core.DTOs
+@using APC.Core.ActivityLog.Core.Contracts
+@using APC.Core.ActivityLog.Core.Enums
+@using MudBlazor
+
+@inject IActivityLogService ActivityLogService
+
+<MudPaper Class="pa-4">
+    <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
+        <MudSelect @bind-Value="_language" Label="Język" Dense="true" Style="width: 120px">
+            <MudSelectItem Value="@("primary")">Primary</MudSelectItem>
+            <MudSelectItem Value="@("secondary")">Secondary</MudSelectItem>
+        </MudSelect>
+        <MudSelect @bind-Value="_granularity" Label="Ważność" Dense="true" Style="width: 140px">
+            <MudSelectItem Value="@ActivityLogGranularity.All">Wszystkie</MudSelectItem>
+            <MudSelectItem Value="@ActivityLogGranularity.Critical">Critical</MudSelectItem>
+            <MudSelectItem Value="@ActivityLogGranularity.Major">Major</MudSelectItem>
+            <MudSelectItem Value="@ActivityLogGranularity.Normal">Normal</MudSelectItem>
+            <MudSelectItem Value="@ActivityLogGranularity.Minor">Minor</MudSelectItem>
+        </MudSelect>
+        <MudTextField @bind-Value="_searchText" Label="Szukaj" Dense="true" Style="width: 200px" />
+        <MudDatePicker @bind-Date="_startDate" Label="Data od" Dense="true" />
+        <MudDatePicker @bind-Date="_endDate" Label="Data do" Dense="true" />
+        <MudSwitch @bind-Value="_compact" Color="Color.Primary" Label="Tryb kompaktowy" />
+    </MudStack>
+    <MudDivider Class="my-2" />
+    <div style="max-height: 600px; overflow-y: auto;" @onscroll="OnScroll">
+        @foreach (var entry in _entries)
+        {
+            <ActivityLogEntryItem Entry="entry" Language="@_language" />
+        }
+        @if (_loading)
+        {
+            <MudProgressCircular Indeterminate="true" Size="Size.Medium" Class="my-2" />
+        }
+        @if (_allLoaded && _entries.Count == 0)
+        {
+            <MudText>Brak wpisów do wyświetlenia.</MudText>
+        }
+    </div>
+</MudPaper>
+
+@code {
+    private List<ActivityLogEntry> _entries = new();
+    private int _page = 1;
+    private bool _loading = false;
+    private bool _allLoaded = false;
+    private string _language = "primary";
+    private ActivityLogGranularity _granularity = ActivityLogGranularity.All;
+    private string _searchText = string.Empty;
+    private DateTime? _startDate;
+    private DateTime? _endDate;
+    private bool _compact = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadMoreAsync(reset: true);
+    }
+
+    private async Task LoadMoreAsync(bool reset = false)
+    {
+        if (_loading || _allLoaded) return;
+        _loading = true;
+        if (reset)
+        {
+            _entries.Clear();
+            _page = 1;
+            _allLoaded = false;
+        }
+        var query = new ActivityLogQuery
+        {
+            PageNumber = _page,
+            PageSize = 50,
+            Granularity = _granularity == ActivityLogGranularity.All ? null : _granularity,
+            SearchText = string.IsNullOrWhiteSpace(_searchText) ? null : _searchText,
+            StartDate = _startDate,
+            EndDate = _endDate
+        };
+        var result = await ActivityLogService.GetLogsAsync(query);
+        var list = result.ToList();
+        if (list.Count < 50) _allLoaded = true;
+        _entries.AddRange(list);
+        _page++;
+        _loading = false;
+        StateHasChanged();
+    }
+
+    private async Task OnScroll()
+    {
+        if (!_allLoaded && !_loading)
+        {
+            await LoadMoreAsync();
+        }
+    }
+
+    private async Task OnFilterChanged()
+    {
+        await LoadMoreAsync(reset: true);
+    }
+} 

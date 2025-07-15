@@ -1,0 +1,82 @@
+@using APC.Core.ActivityLog.Core.Entities
+@using MudBlazor
+
+@inherits OwningComponentBase
+
+<MudPaper Class="pa-2 mb-2 d-flex align-items-center" Elevation="1">
+    <MudAvatar Size="Size.Medium" Color="@GetAvatarColor()" @onclick="ShowUserTooltip">
+        @if (Entry.UserId == null)
+        {
+            <MudIcon Icon="Icons.Material.Filled.Settings" />
+        }
+        else
+        {
+            @GetInitials(Entry.DisplayName)
+        }
+    </MudAvatar>
+    <MudTooltip Text="@(Entry.DisplayName ?? "System")" Placement="Placement.Bottom">
+        <span></span>
+    </MudTooltip>
+    <MudIcon Icon="@Entry.Icon" Color="@GetIconColor()" Class="mx-2" />
+    <div class="flex-grow-1">
+        <span>@ShortDescription</span>
+        @if (IsTruncated)
+        {
+            <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="ToggleExpand">@(_expanded ? "Ukryj" : "Więcej")</MudButton>
+        }
+        @if (_expanded)
+        {
+            <div class="mt-1 text-secondary">@FullDescription</div>
+        }
+        <div>
+            @if (!string.IsNullOrEmpty(Entry.EntityUrl) && !string.IsNullOrEmpty(EntityDisplay))
+            {
+                <MudLink Href="@Entry.EntityUrl" Target="_blank">@EntityDisplay</MudLink>
+            }
+            else if (!string.IsNullOrEmpty(EntityDisplay))
+            {
+                <span>@EntityDisplay</span>
+            }
+        </div>
+    </div>
+    <span class="text-nowrap ms-2">@Entry.Timestamp.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</span>
+</MudPaper>
+
+@code {
+    [Parameter]
+    public ActivityLogEntry Entry { get; set; } = default!;
+    [Parameter]
+    public string Language { get; set; } = "primary";
+
+    private bool _expanded = false;
+    private const int MaxLength = 200;
+
+    private string? FullDescription => Language == "secondary"
+        ? Entry.DescriptionSecondary
+        : Entry.DescriptionPrimary;
+    private string? EntityDisplay => Language == "secondary"
+        ? Entry.EntityDisplaySecondary
+        : Entry.EntityDisplayPrimary;
+    private string ShortDescription =>
+        FullDescription?.Length > MaxLength && !_expanded
+            ? FullDescription.Substring(0, MaxLength) + "..."
+            : FullDescription ?? string.Empty;
+    private bool IsTruncated => FullDescription?.Length > MaxLength;
+    private void ToggleExpand() => _expanded = !_expanded;
+    private string GetInitials(string? name)
+    {
+        if (string.IsNullOrWhiteSpace(name)) return "?";
+        var parts = name.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        return string.Concat(parts.Take(2).Select(p => p[0])).ToUpper();
+    }
+    private Color GetAvatarColor() => Entry.UserId == null ? Color.Default : Color.Primary;
+    private Color GetIconColor() => Entry.IconColor switch
+    {
+        "Color.Error" => Color.Error,
+        "Color.Warning" => Color.Warning,
+        "Color.Info" => Color.Info,
+        "Color.Success" => Color.Success,
+        _ => Color.Default
+    };
+    private void ShowUserTooltip() { /* Placeholder for future user card/modal */ }
+} 
